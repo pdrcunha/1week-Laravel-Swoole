@@ -11,19 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('company', function (Blueprint $table) {
+        Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('cnpj')->unique();
-            $table->string('email');
+            $table->integer('qty');
+            $table->integer('qty_min');
+            $table->foreignId('company_id')
+                  ->constrained('company')
+                  ->onDelete('cascade');
         });
-    }
+    }    
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('company');
+        Schema::dropIfExists('products');
     }
 };

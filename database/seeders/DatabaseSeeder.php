@@ -8,21 +8,19 @@ use App\Models\User;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
+     
         $company = Company::create([
             'name' => 'Administradora',
             'cnpj' => '12345678000100',
             'email' => 'admin@company.com'
         ]);
-
+  
         User::create([
             'name' => 'Administrador',
             'email' => 'admin@user.com',
-            'password' => bcrypt('password'),
+            'password' => 'password',
             'company_id' => $company->id
         ]);
     }

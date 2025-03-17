@@ -10,6 +10,7 @@ class JwtMiddleware
 {
   public function handle($request, Closure $next)
   {
+
     try {
       $user = JWTAuth::parseToken()->authenticate();
     } catch (Exception $e) {
@@ -21,7 +22,7 @@ class JwtMiddleware
         return response()->json(['error' => 'Authorization Token not found'], 401);
       }
     }
-
+    
     $request->user = $user;
     return $next($request);
   }

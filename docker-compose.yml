@@ -6,13 +6,17 @@ services:
     working_dir: /var/www
     volumes:
       - .:/var/www
+      - ./php.ini:/usr/local/etc/php/php.ini
     networks:
       - laravel_network
+    restart: always
     depends_on:
       - postgres
       - redis
     env_file:
       - .env
+    ports:
+      - 9009:9009
 
   nginx:
     image: nginx:alpine

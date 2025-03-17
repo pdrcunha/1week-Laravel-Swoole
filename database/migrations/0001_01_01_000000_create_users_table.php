@@ -16,11 +16,12 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->foreignId('company_id')->constrained('company');
+            $table->foreignId('company_id')
+                  ->constrained('company')
+                  ->onDelete('cascade');
             $table->rememberToken();
-            $table->timestamps();
         });
-    }
+    }    
 
     /**
      * Reverse the migrations.
