@@ -37,17 +37,26 @@ class CompanyManagerController extends Controller
    */
   public function index(Request $req)
   {
-    $companyId = $req->user->company_id;
-    if ($companyId != self::adminCompanyId) {
-      return response()->json(['error' => 'Not permission'], 401);
+    try {
+      $companyId = $req->user->company_id;
+      if ($companyId != self::adminCompanyId) {
+        return response()->json(['error' => 'Not permission'], 401);
+      }
+
+      $cacheKey = "companies-admin:all";
+      $companies = Cache::remember($cacheKey, 300, function () {
+          return Company::with('users')->get();
+      });
+
+      $isCached = Cache::has($cacheKey);
+
+      return response()->json([
+          'cache' => $isCached,
+          'data' => $companies
+      ]);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-
-    $cacheKey = "companies-admin:all";
-    $companies = Cache::remember($cacheKey, 300, function () {
-        return Company::with('users')->get();
-    });
-
-    return response()->json($companies);
   }
 
   /**
@@ -83,35 +92,38 @@ class CompanyManagerController extends Controller
    */
   public function store(Request $req)
   {
-    $companyId = $req->user->company_id;
-    if ($companyId != self::adminCompanyId) {
-      return response()->json(['error' => 'Not permission'], 401);
+    try {
+      $companyId = $req->user->company_id;
+      if ($companyId != self::adminCompanyId) {
+        return response()->json(['error' => 'Not permission'], 401);
+      }
+
+      $validator = Validator::make($req->all(), [
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255',
+        'cnpj' => 'required|string|max:18|unique:company,cnpj'
+      ]);
+
+      if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+      }
+
+      $company = Company::create($validator->validated());
+
+      User::create([
+        'name' => 'Admin',
+        'email' => 'admin_' . $company->cnpj . '@example.com',
+        'password' => bcrypt('password'),
+        'company_id' => $company->id,
+        'role' => 'admin',
+      ]);
+
+      $this->invalidateCache($company->id);
+
+      return response()->json($company, 201);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-
-    $validator = Validator::make($req->all(), [
-      'id' => 'required|integer',
-      'name' => 'required|string|max:255',
-      'email' => 'required|string|max:255',
-      'cnpj' => 'required|string|max:18|unique:companies,cnpj,' . $req->all()['id']
-    ]);
-
-    if ($validator->fails()) {
-      return response()->json(['errors' => $validator->errors()], 422);
-    }
-
-    $company = Company::create($validator->validated());
-
-    User::create([
-      'name' => 'Admin',
-      'email' => 'admin_' . $company->cnpj . '@example.com',
-      'password' => bcrypt('password'),
-      'company_id' => $company->id,
-      'role' => 'admin',
-    ]);
-
-    $this->invalidateCache($company->id);
-
-    return response()->json($company, 201);
   }
 
   /**
@@ -145,20 +157,30 @@ class CompanyManagerController extends Controller
    */
   public function show(Request $req, $id)
   {
-    $companyId = $req->user->company_id;
-    if ($companyId != self::adminCompanyId) {
-      return response()->json(['error' => 'Not permission'], 401);
-    }
+    try {
+      $companyId = $req->user->company_id;
+      if ($companyId != self::adminCompanyId) {
+        return response()->json(['error' => 'Not permission'], 401);
+      }
 
-    $cacheKey = "companies-admin:company:{$id}";
-    $company = Cache::remember($cacheKey, 300, function () use ($id) {
-        return Company::find($id);
-    });
+      $cacheKey = "companies-admin:company:{$id}";
+      $company = Cache::remember($cacheKey, 300, function () use ($id) {
+          return Company::find($id);
+      });
 
-    if (!$company) {
-      return response()->json(['error' => 'Company not found'], 404);
+      $isCached = Cache::has($cacheKey);
+
+      if (!$company) {
+        return response()->json(['error' => 'Company not found'], 404);
+      }
+
+      return response()->json([
+          'cache' => $isCached,
+          'data' => $company
+      ]);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-    return response()->json($company);
   }
 
   /**
@@ -203,33 +225,35 @@ class CompanyManagerController extends Controller
    *     )
    * )
    */
-  public function update(Request $req)
+  public function update(Request $req, $id)
   {
-    $companyId = $req->user->company_id;
-    if ($companyId != self::adminCompanyId) {
-      return response()->json(['error' => 'Not permission'], 401);
+    try {
+      $companyId = $req->user->company_id;
+      if ($companyId != self::adminCompanyId) {
+        return response()->json(['error' => 'Not permission'], 401);
+      }
+
+      $company = Company::find($id);
+      if (!$company) {
+        return response()->json(['error' => 'Company not found'], 404);
+      }
+
+      $validator = Validator::make($req->all(), [
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255',
+        'cnpj' => 'required|string|max:18|unique:company,cnpj,' . $id
+      ]);
+
+      if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+      }
+
+      $company->update($validator->validated());
+      $this->invalidateCache($id);
+      return response()->json($company);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-
-    $data = $req->all();
-    $company = Company::find($data['id']);
-    if (!$company) {
-      return response()->json(['error' => 'Company not found'], 404);
-    }
-
-    $validator = Validator::make($req->all(), [
-      'id' => 'required|integer',
-      'name' => 'required|string|max:255',
-      'email' => 'required|string|max:255',
-      'cnpj' => 'required|string|max:18|unique:companies,cnpj,' . $req->all()['id']
-    ]);
-
-    if ($validator->fails()) {
-      return response()->json(['errors' => $validator->errors()], 422);
-    }
-
-    $company->update($validator->validated());
-    $this->invalidateCache($data['id']);
-    return response()->json($company);
   }
 
   /**
@@ -258,18 +282,22 @@ class CompanyManagerController extends Controller
    */
   public function destroy(Request $req, $id)
   {
-    $companyId = $req->user->company_id;
-    if ($companyId != self::adminCompanyId) {
-      return response()->json(['error' => 'Not permission'], 401);
-    }
+    try {
+      $companyId = $req->user->company_id;
+      if ($companyId != self::adminCompanyId) {
+        return response()->json(['error' => 'Not permission'], 401);
+      }
 
-    $company = Company::find($id);
-    if (!$company) {
-      return response()->json(['error' => 'Company not found'], 404);
+      $company = Company::find($id);
+      if (!$company) {
+        return response()->json(['error' => 'Company not found'], 404);
+      }
+      $company->delete();
+      $this->invalidateCache($id);
+      return response()->json(['message' => 'Company deleted successfully']);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-    $company->delete();
-    $this->invalidateCache($id);
-    return response()->json(['message' => 'Company deleted successfully']);
   }
 
   private function invalidateCache($companyId)

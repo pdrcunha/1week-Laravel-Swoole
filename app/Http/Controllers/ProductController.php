@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Product;
@@ -23,14 +24,23 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $companyId = $request->user->company_id;
-        $cacheKey = "products:company:{$companyId}";
-    
-        $products = Cache::remember($cacheKey, 300, function () use ($companyId) {
-            return Product::where('company_id', $companyId)->get();
-        });
-    
-        return response()->json($products);
+        try {
+            $companyId = $request->user->company_id;
+            $cacheKey = "products:company:{$companyId}";
+
+            $products = Cache::remember($cacheKey, 300, function () use ($companyId) {
+                return Product::where('company_id', $companyId)->get();
+            });
+
+            $isCached = Cache::has($cacheKey);
+
+            return response()->json([
+                'cache' => $isCached,
+                'data' => $products
+            ]);
+        } catch (\Throwable $e) {
+            return $this->handleException($e);
+        }
     }
 
     /**
@@ -43,12 +53,14 @@ class ProductController extends Controller
      *         required=true,
      *         @OA\JsonContent(
      *             @OA\Property(property="name", type="string"),
-     *             @OA\Property(property="price", type="number")
+     *             @OA\Property(property="price", type="number"),
+     *             @OA\Property(property="qty", type="number"),
+     *             @OA\Property(property="qty_min", type="number")
      *         )
      *     ),
      *     @OA\Response(
      *         response=201,
-     *         description="Produto criado com sucesso",
+     *         description="Retorna o produto criado",
      *         @OA\JsonContent(ref="#/components/schemas/Product")
      *     ),
      *     @OA\Response(
@@ -60,22 +72,28 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric',
-        ]);
+        try {
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255',
+                'price' => 'required|numeric',
+                'qty' => 'required|numeric',
+                'qty_min' => 'required|numeric'
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $data = $validator->validated();
+            $data['company_id'] = $request->user->company_id;
+            $product = Product::create($data);
+
+            $this->invalidateCache($data['company_id']);
+
+            return response()->json($product, 201);
+        } catch (\Throwable $e) {
+            return $this->handleException($e);
         }
-
-        $data = $validator->validated();
-        $data['company_id'] = $request->user->company_id;
-        $product = Product::create($data);
-
-        $this->invalidateCache($data['company_id']);
-
-        return response()->json($product, 201);
     }
 
     /**
@@ -92,7 +110,7 @@ class ProductController extends Controller
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Dados do produto",
+     *         description="Retorna os dados do produto",
      *         @OA\JsonContent(ref="#/components/schemas/Product")
      *     ),
      *     @OA\Response(
@@ -102,21 +120,30 @@ class ProductController extends Controller
      *     )
      * )
      */
-    
+
     public function show(Request $request, $id)
     {
-        $companyId = $request->user->company_id;
-        $cacheKey = "products:company:{$companyId}:product:{$id}";
-    
-        $product = Cache::remember($cacheKey, 300, function () use ($companyId, $id) {
-            return Product::where('id', $id)->where('company_id', $companyId)->first();
-        });
-    
-        if (!$product) {
-            return response()->json(['error' => 'Produto não encontrado'], 404);
+        try {
+            $companyId = $request->user->company_id;
+            $cacheKey = "products:company:{$companyId}:product:{$id}";
+
+            $product = Cache::remember($cacheKey, 300, function () use ($companyId, $id) {
+                return Product::where('id', $id)->where('company_id', $companyId)->first();
+            });
+
+            $isCached = Cache::has($cacheKey);
+
+            if (!$product) {
+                return response()->json(['error' => 'Produto não encontrado'], 404);
+            }
+
+            return response()->json([
+                'cache' => $isCached,
+                'data' => $product
+            ]);
+        } catch (\Throwable $e) {
+            return $this->handleException($e);
         }
-    
-        return response()->json($product);
     }
 
     /**
@@ -135,7 +162,9 @@ class ProductController extends Controller
      *         required=true,
      *         @OA\JsonContent(
      *             @OA\Property(property="name", type="string"),
-     *             @OA\Property(property="price", type="number")
+     *             @OA\Property(property="price", type="number"),
+     *             @OA\Property(property="qty", type="number"),
+     *             @OA\Property(property="qty_min", type="number")
      *         )
      *     ),
      *     @OA\Response(
@@ -157,23 +186,29 @@ class ProductController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $companyId = $request->user->company_id;
-        $product = Product::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+        try {
+            $companyId = $request->user->company_id;
+            $product = Product::where('id', $id)->where('company_id', $companyId)->firstOrFail();
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|required|string|max:255',
-            'price' => 'sometimes|required|numeric',
-        ]);
+            $validator = Validator::make($request->all(), [
+                'name' => 'sometimes|required|string|max:255',
+                'price' => 'sometimes|required|numeric',
+                'qty' => 'required|numeric',
+                'qty_min' => 'required|numeric'
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $product->update($validator->validated());
+
+            $this->invalidateCache($companyId, $id);
+
+            return response()->json($product, 200);
+        } catch (\Throwable $e) {
+            return $this->handleException($e);
         }
-
-        $product->update($validator->validated());
-
-        $this->invalidateCache($companyId, $id);
-
-        return response()->json($product, 200);
     }
 
     /**
@@ -201,13 +236,17 @@ class ProductController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $companyId = $request->user->company_id;
-        $product = Product::where('id', $id)->where('company_id', $companyId)->firstOrFail();
-        $product->delete();
+        try {
+            $companyId = $request->user->company_id;
+            $product = Product::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+            $product->delete();
 
-        $this->invalidateCache($companyId, $id);
+            $this->invalidateCache($companyId, $id);
 
-        return response()->json(null, 204);
+            return response()->json(null, 204);
+        } catch (\Throwable $e) {
+            return $this->handleException($e);
+        }
     }
 
     private function invalidateCache($companyId, $productId = null)

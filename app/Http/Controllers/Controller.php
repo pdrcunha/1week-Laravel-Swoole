@@ -1,6 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
+
+use Illuminate\Support\Facades\Log;
+
 /**
  * @OA\Info(
  *      version="1.0.0",
@@ -15,10 +18,14 @@ namespace App\Http\Controllers;
  *     type="http",
  *     scheme="bearer",
  *     bearerFormat="JWT"
- * )w
+ * )
  */
 
 abstract class Controller
 {
-    //
+    protected function handleException(\Throwable $e)
+    {
+        Log::error("Exception in file {$e->getFile()} on line {$e->getLine()}: {$e->getMessage()}");
+        return response()->json(['error' => 'An unexpected error occurred. Please try again later.'], 500);
+    }
 }

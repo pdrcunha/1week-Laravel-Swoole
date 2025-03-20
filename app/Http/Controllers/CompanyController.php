@@ -24,11 +24,21 @@ class CompanyController extends Controller
    */
   public function index()
   {
-    $cacheKey = "companies:all";
-    $companies = Cache::remember($cacheKey, 300, function () {
-        return Company::all();
-    });
-    return response()->json($companies);
+    try {
+      $cacheKey = "companies:all";
+      $companies = Cache::remember($cacheKey, 300, function () {
+          return Company::all();
+      });
+
+      $isCached = Cache::has($cacheKey);
+
+      return response()->json([
+          'cache' => $isCached,
+          'data' => $companies
+      ]);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
+    }
   }
 
   /**
@@ -57,16 +67,26 @@ class CompanyController extends Controller
    */
   public function show(Request $req)
   {
-    $companyId = $req->user->company_id;
-    $cacheKey = "companies:company:{$companyId}";
-    $company = Cache::remember($cacheKey, 300, function () use ($companyId) {
-        return Company::find($companyId);
-    });
+    try {
+      $companyId = $req->user->company_id;
+      $cacheKey = "companies:company:{$companyId}";
+      $company = Cache::remember($cacheKey, 300, function () use ($companyId) {
+          return Company::find($companyId);
+      });
 
-    if (!$company) {
-      return response()->json(['error' => 'Company not found'], 404);
+      $isCached = Cache::has($cacheKey);
+
+      if (!$company) {
+        return response()->json(['error' => 'Company not found'], 404);
+      }
+
+      return response()->json([
+          'cache' => $isCached,
+          'data' => $company
+      ]);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-    return response()->json($company);
   }
 
   /**
@@ -108,25 +128,29 @@ class CompanyController extends Controller
    */
   public function update(Request $req)
   {
-    $companyId = $req->user->company_id;
-    $company = Company::find($companyId);
-    if (!$company) {
-      return response()->json(['error' => 'Company not found'], 404);
+    try {
+      $companyId = $req->user->company_id;
+      $company = Company::find($companyId);
+      if (!$company) {
+        return response()->json(['error' => 'Company not found'], 404);
+      }
+
+      $validator = Validator::make($req->all(), [
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255',
+        'cnpj' => 'required|string|max:18|unique:company,cnpj,' . $company->id,
+      ]);
+
+      if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+      }
+
+      $company->update($validator->validated());
+      $this->invalidateCache($companyId);
+      return response()->json($company);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-
-    $validator = Validator::make($req->all(), [
-      'name' => 'required|string|max:255',
-      'email' => 'required|string|max:255',
-      'cnpj' => 'required|string|max:18|unique:companies,cnpj,' . $company->id,
-    ]);
-
-    if ($validator->fails()) {
-      return response()->json(['errors' => $validator->errors()], 422);
-    }
-
-    $company->update($validator->validated());
-    $this->invalidateCache($companyId);
-    return response()->json($company);
   }
 
   /**
@@ -155,14 +179,18 @@ class CompanyController extends Controller
    */
   public function destroy(Request $req)
   {
-    $companyId = $req->user->company_id;
-    $company = Company::find($companyId);
-    if (!$company) {
-      return response()->json(['error' => 'Company not found'], 404);
+    try {
+      $companyId = $req->user->company_id;
+      $company = Company::find($companyId);
+      if (!$company) {
+        return response()->json(['error' => 'Company not found'], 404);
+      }
+      $company->delete();
+      $this->invalidateCache($companyId);
+      return response()->json(['message' => 'Company deleted successfully']);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-    $company->delete();
-    $this->invalidateCache($companyId);
-    return response()->json(['message' => 'Company deleted successfully']);
   }
 
   private function invalidateCache($companyId)

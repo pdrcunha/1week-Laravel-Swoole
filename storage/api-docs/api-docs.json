@@ -836,6 +836,9 @@
                                     },
                                     "price": {
                                         "type": "number"
+                                    },
+                                    "qty": {
+                                        "type": "number"
                                     }
                                 },
                                 "type": "object"
@@ -953,6 +956,12 @@
                                         "type": "string"
                                     },
                                     "price": {
+                                        "type": "number"
+                                    },
+                                    "qty": {
+                                        "type": "number"
+                                    },
+                                    "qty_min": {
                                         "type": "number"
                                     }
                                 },

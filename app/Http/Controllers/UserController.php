@@ -24,8 +24,12 @@ class UserController extends Controller
    */
   public function index(Request $request)
   {
-    $companyId = $request->user->company_id;
-    return response()->json(User::where('company_id', $companyId)->get());
+    try {
+      $companyId = $request->user->company_id;
+      return response()->json(User::where('company_id', $companyId)->get());
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
+    }
   }
 
   /**
@@ -56,26 +60,30 @@ class UserController extends Controller
    */
   public function store(Request $request)
   {
-    $validator = Validator::make($request->all(), [
-      'name' => 'required|string|max:255',
-      'email' => 'required|string|email|max:255|unique:users',
-      'password' => 'required|string|min:8',
-    ]);
+    try {
+      $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255|unique:users',
+        'password' => 'required|string|min:8',
+      ]);
 
-    if ($validator->fails()) {
-      return response()->json(['errors' => $validator->errors()], 422);
+      if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+      }
+
+      $validatedData = $validator->validated();
+
+      $user = User::create([
+        'name' => $validatedData['name'],
+        'email' => $validatedData['email'],
+        'password' => Hash::make($validatedData['password']),
+        'company_id' => $request->user->company_id,
+      ]);
+
+      return response()->json($user, 201);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-
-    $validatedData = $validator->validated();
-
-    $user = User::create([
-      'name' => $validatedData['name'],
-      'email' => $validatedData['email'],
-      'password' => Hash::make($validatedData['password']),
-      'company_id' => $request->user->company_id,
-    ]);
-
-    return response()->json($user, 201);
   }
 
   /**
@@ -104,14 +112,18 @@ class UserController extends Controller
    */
   public function show(Request $request, $id)
   {
-    $companyId = $request->user->company_id;
-    $user = User::where('id', $id)->where('company_id', $companyId)->first();
+    try {
+      $companyId = $request->user->company_id;
+      $user = User::where('id', $id)->where('company_id', $companyId)->first();
 
-    if (!$user) {
-      return response()->json(['error' => 'User not found'], 404);
+      if (!$user) {
+        return response()->json(['error' => 'User not found'], 404);
+      }
+
+      return response()->json($user);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-
-    return response()->json($user);
   }
 
   /**
@@ -153,32 +165,36 @@ class UserController extends Controller
    */
   public function update(Request $request, $id)
   {
-    $companyId = $request->user->company_id;
-    $user = User::where('id', $id)->where('company_id', $companyId)->first();
+    try {
+      $companyId = $request->user->company_id;
+      $user = User::where('id', $id)->where('company_id', $companyId)->first();
 
-    if (!$user) {
-      return response()->json(['error' => 'User not found'], 404);
+      if (!$user) {
+        return response()->json(['error' => 'User not found'], 404);
+      }
+
+      $validator = Validator::make($request->all(), [
+        'name' => 'sometimes|required|string|max:255',
+        'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $id,
+        'password' => 'sometimes|required|string|min:8',
+      ]);
+
+      if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+      }
+
+      $validatedData = $validator->validated();
+
+      if (isset($validatedData['password'])) {
+        $validatedData['password'] = Hash::make($validatedData['password']);
+      }
+
+      $user->update($validatedData);
+
+      return response()->json($user);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-
-    $validator = Validator::make($request->all(), [
-      'name' => 'sometimes|required|string|max:255',
-      'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $id,
-      'password' => 'sometimes|required|string|min:8',
-    ]);
-
-    if ($validator->fails()) {
-      return response()->json(['errors' => $validator->errors()], 422);
-    }
-
-    $validatedData = $validator->validated();
-
-    if (isset($validatedData['password'])) {
-      $validatedData['password'] = Hash::make($validatedData['password']);
-    }
-
-    $user->update($validatedData);
-
-    return response()->json($user);
   }
 
   /**
@@ -207,15 +223,19 @@ class UserController extends Controller
    */
   public function destroy(Request $request, $id)
   {
-    $companyId = $request->user->company_id;
-    $user = User::where('id', $id)->where('company_id', $companyId)->first();
+    try {
+      $companyId = $request->user->company_id;
+      $user = User::where('id', $id)->where('company_id', $companyId)->first();
 
-    if (!$user) {
-      return response()->json(['error' => 'User not found'], 404);
+      if (!$user) {
+        return response()->json(['error' => 'User not found'], 404);
+      }
+
+      $user->delete();
+
+      return response()->json(['message' => 'User deleted successfully']);
+    } catch (\Throwable $e) {
+      return $this->handleException($e);
     }
-
-    $user->delete();
-
-    return response()->json(['message' => 'User deleted successfully']);
   }
 }
