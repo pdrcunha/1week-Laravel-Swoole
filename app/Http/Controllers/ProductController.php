@@ -6,6 +6,8 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Redis;
+use function Co\go;
 
 class ProductController extends Controller
 {
@@ -89,6 +91,15 @@ class ProductController extends Controller
             $product = Product::create($data);
 
             $this->invalidateCache($data['company_id']);
+
+            go(function () use ($product) {
+                Redis::rpush('product_queue', json_encode([
+                    'name' => $product->name,
+                    'quantity' => $product->qty,
+                    'minimum_quantity' => $product->qty_min,
+                    'company_id' => $product->company_id
+                ]));
+            });
 
             return response()->json($product, 201);
         } catch (\Throwable $e) {
@@ -202,8 +213,15 @@ class ProductController extends Controller
             }
 
             $product->update($validator->validated());
-
             $this->invalidateCache($companyId, $id);
+            go(function () use ($product) {
+                Redis::rpush('product_queue', json_encode([
+                    'name' => $product->name,
+                    'quantity' => $product->qty,
+                    'minimum_quantity' => $product->qty_min,
+                    'company_id' => $product->company_id
+                ]));
+            });
 
             return response()->json($product, 200);
         } catch (\Throwable $e) {

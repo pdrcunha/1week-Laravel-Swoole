@@ -127,6 +127,12 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'product_notifications' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/product_notifications.log'),
+            'level' => 'info',
+        ],
+
     ],
 
 ];

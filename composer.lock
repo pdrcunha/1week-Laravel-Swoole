@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "47f1b4939101e1b47c58334e3342fc87",
+    "content-hash": "02b076ccfe0866db81ebcd048871e040",
     "packages": [
         {
             "name": "brick/math",
@@ -3736,6 +3736,38 @@
                 "source": "https://github.com/swagger-api/swagger-ui/tree/v5.20.1"
             },
             "time": "2025-03-10T10:57:35+00:00"
+        },
+        {
+            "name": "swoft/swoole-ide-helper",
+            "version": "v4.4.8",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/swoft-cloud/swoole-ide-helper.git",
+                "reference": "dfbe372cca6baccd362bc276aa07c5d65b2c1b36"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/swoft-cloud/swoole-ide-helper/zipball/dfbe372cca6baccd362bc276aa07c5d65b2c1b36",
+                "reference": "dfbe372cca6baccd362bc276aa07c5d65b2c1b36",
+                "shasum": ""
+            },
+            "type": "library",
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "description": "IDE helper for Swoft and Swoole",
+            "keywords": [
+                "ide-helper",
+                "php",
+                "swoft",
+                "swoole"
+            ],
+            "support": {
+                "issues": "https://github.com/swoft-cloud/swoole-ide-helper/issues",
+                "source": "https://github.com/swoft-cloud/swoole-ide-helper/tree/master"
+            },
+            "time": "2019-10-17T09:54:14+00:00"
         },
         {
             "name": "symfony/clock",

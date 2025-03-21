@@ -839,6 +839,9 @@
                                     },
                                     "qty": {
                                         "type": "number"
+                                    },
+                                    "qty_min": {
+                                        "type": "number"
                                     }
                                 },
                                 "type": "object"
@@ -848,7 +851,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Produto criado com sucesso",
+                        "description": "Retorna o produto criado",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -899,7 +902,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Dados do produto",
+                        "description": "Retorna os dados do produto",
                         "content": {
                             "application/json": {
                                 "schema": {

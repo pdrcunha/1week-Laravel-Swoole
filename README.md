@@ -1,11 +1,11 @@
 
-# Laravel High Performance API with Swoole, PostgreSQL, and Docker
+# Laravel High-Performance API com Swoole, PostgreSQL e Docker
 
 ## Sobre o Projeto
 
-Este projeto é um estudo de fixação para aplicações de alta performance utilizando Laravel, Docker, Redis e PostgreSQL. A API é multitenante, permitindo que empresas cadastrem seu CNPJ, gerenciem seus usuários e administrem seus produtos.
+Este projeto é um estudo de fixação para aplicações de alta performance utilizando **Laravel**, **Docker**, **Redis** e **PostgreSQL**. A API é **multitenante**, permitindo que empresas cadastrem seu **CNPJ**, gerenciem seus usuários e administrem seus produtos.
 
-O foco principal é otimizar a performance mesmo em máquinas com recursos limitados, explorando soluções como:
+O foco principal é otimizar a performance, mesmo em máquinas com recursos limitados, explorando soluções como:
 
 -   **Swoole** para melhorar a performance do Laravel
     
@@ -18,100 +18,94 @@ O foco principal é otimizar a performance mesmo em máquinas com recursos limit
 -   **Nginx** para proxy e balanceamento de carga
     
 
-Estou em um período de estudos de **6 semanas**. Esta aplicação corresponde à **Semana 1**. O desenvolvimento ainda está em andamento.
+Estou em um período de estudos de **6 semanas**. Esta aplicação corresponde à **Semana 1**
+
+----------
 
 ## Como Executar o Projeto
 
 ### 1. Clonar o Repositório
 
-```
-git clone https://github.com/pdrcunha/1week-Laravel-Swoole.git
-cd pasta_criada
-```
-
 ### 2. Configurar Variáveis de Ambiente
 
 Copiar o arquivo de exemplo `.env.example` para `.env`:
 
-```
-cp .env.example .env
-```
-
 ### 3. Subir os Containers Docker
 
-```
-docker-compose up -d
-```
+Isso iniciará os containers para **Laravel, PostgreSQL, Redis e Swoole**.
 
-Isso iniciará os containers para Laravel, PostgreSQL, Redis e Swoole.
+O comando abaixo inicia o consumidor da fila de "notificações":
 
 ### 4. Executar Migrations
-
-```
-docker-compose exec app php artisan migrate
-docker-compose exec app php artisan db:seed
-```
 
 ### 5. Acessar a API
 
 A API estará rodando em: [http://localhost](http://localhost/)
 
-## Práticas
+----------
 
--   Explorando o Laravel 11
+## Práticas Utilizadas
+
+-   Explorando o **Laravel 11**
     
--   Cache para performance
+-   Implementação de **cache** para performance
     
--   Documentação com OpenAPI e L5 Swagger
+-   **Documentação** da API com **OpenAPI** e **L5 Swagger**
     
--   Teste de performance com Swoole
+-   Testes de **performance** com **Swoole**
     
+
+----------
 
 ## Comandos Úteis
 
-Rodar migrations:
-
-```
-docker-compose exec app php artisan migrate --seed
-```
+Rodar migrations com seed:
 
 Acessar o container do Laravel:
 
-```
-docker-compose exec app bash
-```
-
 Monitorar logs:
-
-```
-docker-compose logs -f app
-```
 
 Parar os containers:
 
-```
-docker-compose down
-```
+----------
 
-## Anotações e Aprendizado (Pessoal)
+## Anotações e Aprendizado
 
--   A função **apiResource** no Laravel já monta as rotas CRUD automaticamente, e também é possível criar o controlador de recurso de forma automática. [Documentação](https://laravel.com/docs/12.x/controllers#resource-controllers).
+-   A função **apiResource** no Laravel já monta as rotas CRUD automaticamente. Também é possível criar o controlador de recurso de forma automática. [Documentação](https://laravel.com/docs/12.x/controllers#resource-controllers).
     
--   Para documentar sua API, é quase uma regra utilizar o padrão **OpenAPI (3.0)**. No PHP, temos o [L5 Swagger](https://github.com/DarkaOnLine/L5-Swagger), que percorre comentários nos controllers para gerar um `.yml` e disponibilizar o Swagger UI. No entanto, o código fica poluído com esses comentários, e é necessário aprender mais uma forma de escrita. Em minha visão, é melhor manter o arquivo `.yml` ou `.json` atualizado manualmente.
+-   Para documentar APIs, é quase uma regra utilizar o **OpenAPI (3.0)**. No PHP, o [L5 Swagger](https://github.com/DarkaOnLine/L5-Swagger) percorre os comentários nos controllers para gerar um `.yml` e disponibilizar a Swagger UI. No entanto, isso polui o código. Prefiro manter um arquivo `.yml` ou `.json` atualizado manualmente.
     
--   Gastei um bom tempo tentando configurar o Xdebug para depuração, mas parece que o Swoole e o Xdebug não são compatíveis. Encontrei uma ferramenta chamada Yasd, criada pela mesma equipe do Swoole, mas não estou disposto a testá-la no momento.
+-   **Swoole e Xdebug não são compatíveis**. Existe uma ferramenta chamada **Yasd**, feita pela equipe do Swoole, mas ainda não testei.
     
--   Como o Swoole é um script de execução contínua (long-lived), não posso simplesmente dar `exit` ou `print_r`, pois isso afetaria a execução no terminal. Em vez disso, posso usar a função `flush()` para forçar a saída para o cliente.
+-   Como o **Swoole é um script de execução contínua (long-lived)**, não posso simplesmente usar `exit` ou `print_r`. Em vez disso, posso usar `flush()` para forçar a saída para o cliente.
     
--   Mesmo sendo uma aplicação de execução contínua, percebi que não é comum rodar um servidor HTTP e um consumidor de fila RabbitMQ juntos no Swoole. Após uma pesquisa rápida, vi que os projetos normalmente possuem um comando separado para processar as filas, e algumas empresas usam até o Supervisor para manter esse serviço ativo.
+-   Aplicações de execução contínua geralmente não rodam um servidor HTTP e um consumidor de filas juntos no Swoole. Empresas costumam criar **comandos separados** para processar filas e usam **Supervisor** para manter o serviço ativo.
     
--   Eu SEMPRE projeto meus bancos usando `timestamps` em TODAS as tabelas, no estilo de "dado paranoico", mas desta vez decidi fazer um modelo híbrido. Agora, preciso validar dados antes de deletá-los devido a chaves estrangeiras. Isso é uma boa prática para aprendizado.
+-   **Sobre timestamps no banco:** Sempre projetei bancos com `timestamps` em todas as tabelas, mas desta vez fiz um modelo híbrido. Agora, preciso validar os dados antes de deletá-los por causa de chaves estrangeiras. Isso é um bom aprendizado.
     
--   Ao pesquisar um pouco mais, vi que é comum empresas grandes criarem os schemas nos modelos para documentar os retornos. Algumas até fazem isso nos controllers.
+-   **Documentação nos models:** Algumas empresas documentam os **schemas** diretamente nos **models** para definir os retornos das APIs. Outras fazem isso nos **controllers**.
+    
+-   **Cache Simples e Eficaz:** Minha abordagem de cache segue a lógica:
+    
+    -   Cache para **getOne** e **getAll**.
+        
+    -   Invalidação do cache ao criar, deletar ou atualizar um registro.
+        
+    -   Simples, mas eficaz quando o número de leituras é **muito maior** que o de escritas.
+        
+-   **Estudo sobre as rotinas do Swoole:**
+    
+    -   Diferença entre `Process`, `go`, `run` e `channel` (este último acredito que não precisarei usar ativamente).
+        
+    -   Rodar tarefas assíncronas com Swoole funciona quase como um **event loop**, permitindo escalabilidade impressionante.
+        
+    -   **Gerenciamento de erros** dentro de rotinas assíncronas é complexo. Logs parecem ser a melhor abordagem para capturá-los.
+        
+    -   Depuração de rotinas assíncronas é **simples**, desde que não sejam milhares rodando ao mesmo tempo.
+        
 
-- Pratica de cachear os getOne e getAll e deletar tudo em caso de um novo post, delete ou put, e uma pratica extremamente simples de cache mas bem eficas. Mais simples ainde seria so simplismente usar ttl de 30segundo ou um minuto mas isso só funciona para apis de grande numero de leitura onde ter o dado em tempo "habil" pouco importa. O melhor dos mundos mesmo poderia ser a duplicação botando os posts no cache e os updates tambem mas isso consome um tempo infernal. A abordagem que usei só é realmente eficaz se o numero de leituras e muito maior que o numero de escritas pos um taio limit.
-    
+----------
 
 ## Observação
 
--   Infelizmente, não finalizei o projeto em uma semana. Levei apenas algumas horas, mas minhas semanas às vezes têm apenas 2 a 8 horas disponíveis para estudo, e essa semans tem sido corridas
+Infelizmente, não finalizei o projeto em **uma semana**. Trabalhei apenas algumas horas, pois minha disponibilidade varia entre **2 a 8 horas por semana** para estudos. Esta semana, em particular, foi muito corrida.
